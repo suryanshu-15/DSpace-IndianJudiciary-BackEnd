@@ -428,6 +428,15 @@
             <artifactId>httpmime</artifactId>
         </dependency>
 
+
+        <dependency>
+            <groupId>in.cdac.hcdc</groupId>
+            <artifactId>jtdr-metadata-schema</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+
+
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
@@ -636,6 +645,8 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+
 
         <!-- Specify the version of json-smart we want to use.
              This solves a version mismatch between nimbus-jose-jwt and json-path below. -->
