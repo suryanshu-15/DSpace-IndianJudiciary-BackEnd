@@ -242,12 +242,46 @@ public class AuthenticationRestController implements InitializingBean {
      * For logout we *require* POST requests. HEAD is also supported for endpoint visibility in HAL Browser, etc.
      * @return ResponseEntity (204 No Content)
      */
+
+
+
     @RequestMapping(value = "/logout", method = {RequestMethod.HEAD, RequestMethod.POST})
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         Context context = ContextUtil.obtainContext(request);
-        userSessionAuditService.logLogout(context.getCurrentUser(),request,request.getSession(true).getId());
+        userSessionAuditService.logLogout(context.getCurrentUser(), request);
         return ResponseEntity.noContent().build();
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    @RequestMapping(value = "/logout", method = {RequestMethod.HEAD, RequestMethod.POST})
+//    public ResponseEntity<Void> logout(HttpServletRequest request) {
+//        Context context = ContextUtil.obtainContext(request);
+//
+//        // Only pass user and request
+//        userSessionAuditService.logLogout(context.getCurrentUser(), request);
+//
+//        return ResponseEntity.noContent().build();
+//    }
+
 
     /**
      * Disables GET/PUT/PATCH on the /logout endpoint. You must use POST (see above method)

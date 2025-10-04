@@ -10,3 +10,5 @@ import java.util.UUID;
 public interface RoleAuditLogRepository extends JpaRepository<RoleAuditLog, UUID> {
     List<RoleAuditLog> findByAffectedUser(UUID affectedUser);
 }
+
+

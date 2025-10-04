@@ -12,3 +12,6 @@ public interface FileAccessLogRepository extends JpaRepository<FileAccessLog, UU
     List<FileAccessLog> findByUserId(UUID userId);
     List<FileAccessLog> findByFileId(UUID fileId);
 }
+
+
+

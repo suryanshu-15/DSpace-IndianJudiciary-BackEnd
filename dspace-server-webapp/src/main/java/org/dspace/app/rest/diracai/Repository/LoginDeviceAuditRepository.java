@@ -14,3 +14,5 @@ public interface LoginDeviceAuditRepository extends JpaRepository<LoginDeviceAud
     // Find all login attempts by epersonUUID and deviceId
     List<LoginDeviceAudit> findByEpersonUUIDAndDeviceId(UUID epersonUUID, String deviceId);
 }
+
+

@@ -9,6 +9,8 @@ public class Audit {
     private Timestamp loginTime;
     private Timestamp logoutTime;
     private Long duration;
+    private String eventType;  // ✅ Add this
+
 
     public void setDuration(Long duration) {
         this.duration = duration;
@@ -49,4 +51,7 @@ public class Audit {
     public void setLogoutTime(Timestamp logoutTime) {
         this.logoutTime = logoutTime;
     }
+
+    public String getEventType() { return eventType; }
+    public void setEventType(String eventType) { this.eventType = eventType; }
 }

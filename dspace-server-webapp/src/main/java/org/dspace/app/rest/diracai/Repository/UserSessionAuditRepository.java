@@ -15,4 +15,11 @@ public interface UserSessionAuditRepository extends JpaRepository<UserSessionAud
 
     Optional<UserSessionAudit> findTopByUserIdAndSessionIdAndEventTypeOrderByTimestampDesc(UUID userId, String sessionId, String eventType);
 
+
+    // Find the latest active session (LOGIN without logout) for a user + session
+    Optional<UserSessionAudit> findTopByUserIdAndSessionIdAndLogoutTimeIsNullOrderByLoginTimeDesc(UUID userId, String sessionId);
+
+
 }
+
+
