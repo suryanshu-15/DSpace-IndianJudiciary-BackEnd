@@ -132,13 +132,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.HttpClient;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.dspace.app.rest.diracai.Repository.FileHashRecordRepository;
-import org.dspace.app.rest.diracai.dto.JtdrDetailedReportRow;
 import org.dspace.app.rest.diracai.service.JtdrIntegrationService;
 import org.dspace.content.Diracai.FileHashRecord;
-import org.dspace.content.service.ItemService;
-import org.dspace.core.Context;
 import org.dspace.services.ConfigurationService;
-import org.dspace.xoai.services.api.context.ContextService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
@@ -168,14 +164,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -244,46 +236,7 @@ public class JtdrIntegrationServiceImpl implements JtdrIntegrationService {
     @Autowired
     private ConfigurationService configurationService;
 
-    @Autowired
-    private FileHashRecordRepository recordRepository;
-
-    @Autowired private ItemService itemService;
-    @Autowired private ContextService contextService;
-
     private Map<String, String> responseMessages = new HashMap<>();
-
-    @Override
-    public List<JtdrDetailedReportRow> getDetailedReport(LocalDateTime from, LocalDateTime to) {
-        var records = repository.findAllForReport(from, to);
-
-        try (Context context = contextService.getContext()) {
-            // Capture current user name before stream
-            String userName = context.getCurrentUser() != null ? context.getCurrentUser().getName() : "Unknown";
-
-            // Use AtomicInteger for counter inside stream
-            AtomicInteger counter = new AtomicInteger(1);
-
-            return records.stream().map(rec -> {
-                JtdrDetailedReportRow row = new JtdrDetailedReportRow();
-                row.batchName = rec.getBatchName();
-                row.caseType = rec.getCaseType();
-                row.caseNo = rec.getCaseNo();
-                row.slNumber = counter.getAndIncrement();
-                row.uploadDate = rec.getUploadDate();
-                row.userName = userName;
-                row.uploadStatus = rec.getGetCheckResponse();
-                row.zipCreatedAt = rec.getCreatedAt();
-                row.zipStatus = rec.getZipStatus();
-                row.createdBy = rec.getCreatedBy();
-                row.uploadedBy = rec.getUploadedBy();
-                return row;
-            }).collect(Collectors.toList());
-
-        } catch (Exception e) {
-            return List.of();
-        }
-    }
-
 
     public String Mappers(String status) {
         // Initialize the response messages map
@@ -302,18 +255,15 @@ public class JtdrIntegrationServiceImpl implements JtdrIntegrationService {
     }
 
     @Override
-    public Map<String, Object> submitCase(Context context,String cnr) {
+    public Map<String, Object> submitCase(String cnr) {
         try {
 
             String dspaceDir = configurationService.getProperty("dspace.dir");
             String folderBasePath = dspaceDir + "/jtdr";
-            FileHashRecord fileHashRecord = recordRepository.findByFileName(cnr);
-            String cino = fileHashRecord.getCinoNumber();
-            String zipFilePath = folderBasePath + "/" + cino + ".zip";
+            String zipFilePath = folderBasePath + "/" + cnr + ".zip";
             File zipFile = new File(zipFilePath);
 
-
-            generateZip(cino, zipFile);
+            generateZip(cnr, zipFile);
 
             if (!zipFile.exists()) {
                 return Map.of("error", "ZIP file not found", "path", zipFilePath);
@@ -328,7 +278,7 @@ public class JtdrIntegrationServiceImpl implements JtdrIntegrationService {
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             String calculatedZipHash = calculateSHA256(zipFile);
             body.add("zipHash", calculatedZipHash);
-            body.add("cnr", cino);
+            body.add("cnr", cnr);
             body.add("caseZip", new FileSystemResource(zipFile));
             body.add("userId", "depositor_hc@orissa.hc.in");
 
@@ -347,17 +297,13 @@ public class JtdrIntegrationServiceImpl implements JtdrIntegrationService {
             if (responseMap.containsKey("ackId")) {
                 FileHashRecord record = repository.findByFileName(cnr);
                 if (record != null) {
-                    record.setUploadDate(LocalDateTime.now());
                     record.setAckId((String) responseMap.get("ackId"));
                     record.setPostResponse((String) responseMap.getOrDefault("message", ""));
-                    record.setStatus("Transferred Case Successfully");
-                    record.setUploadedBy(context.getCurrentUser().getName());
                     repository.save(record);
                 }
             } else {
                 FileHashRecord record = repository.findByFileName(cnr);
                 if (record != null) {
-                    record.setUploadDate(LocalDateTime.now());
                     record.setPostStatus(statusCode);
                     record.setPostResponse(Mappers(statusCode));
                     repository.save(record);

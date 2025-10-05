@@ -2,7 +2,6 @@ package org.dspace.content.Diracai;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "file_hash_record")
@@ -20,82 +19,6 @@ public class FileHashRecord {
     private String getCheckResponse;
     private String getCheckStatus;
     private Integer fileCount;
-    private LocalDateTime uploadDate;
-    private String batchName;
-    private String caseType;
-    private String caseNo;
-    private String Status;
-    private String cinoNumber;
-    private String createdBy;
-    private String uploadedBy;
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public String getUploadedBy() {
-        return uploadedBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public void setUploadedBy(String uploadedBy) {
-        this.uploadedBy = uploadedBy;
-    }
-
-    public String getCinoNumber() {
-        return cinoNumber;
-    }
-
-    public void setCinoNumber(String cinoNumber) {
-        this.cinoNumber = cinoNumber;
-    }
-
-    public String getStatus() {
-        return Status;
-    }
-
-    public void setStatus(String status) {
-        Status = status;
-    }
-
-    public void setUploadDate(LocalDateTime uploadDate) {
-        this.uploadDate = uploadDate;
-    }
-
-    public void setFileCount(Integer fileCount) {
-        this.fileCount = fileCount;
-    }
-
-    public LocalDateTime getUploadDate() {
-        return uploadDate;
-    }
-
-    public void setCaseType(String caseType) {
-        this.caseType = caseType;
-    }
-
-    public void setBatchName(String batchName) {
-        this.batchName = batchName;
-    }
-
-    public String getCaseType() {
-        return caseType;
-    }
-
-    public String getCaseNo() {
-        return caseNo;
-    }
-
-    public String getBatchName() {
-        return batchName;
-    }
-
-    public void setCaseNo(String caseNo) {
-        this.caseNo = caseNo;
-    }
 
     public Integer getFileCount() {
         return fileCount;

@@ -19,6 +19,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.dspace.app.rest.converter.ConverterService;
 import org.dspace.app.rest.converter.EPersonConverter;
+import org.dspace.app.rest.diracai.service.LoginDeviceAuditService;
+import org.dspace.app.rest.diracai.service.UserSessionAuditService;
 import org.dspace.app.rest.link.HalLinkService;
 import org.dspace.app.rest.model.AuthenticationStatusRest;
 import org.dspace.app.rest.model.AuthenticationTokenRest;
@@ -83,10 +85,13 @@ public class AuthenticationRestController implements InitializingBean {
     @Autowired
     private Utils utils;
 
+    @Autowired
+    private UserSessionAuditService userSessionAuditService;
+
     @Override
     public void afterPropertiesSet() {
         discoverableEndpointsService
-            .register(this, Arrays.asList(Link.of("/api/" + AuthnRest.CATEGORY, AuthnRest.NAME)));
+                .register(this, Arrays.asList(Link.of("/api/" + AuthnRest.CATEGORY, AuthnRest.NAME)));
     }
 
     @RequestMapping(method = RequestMethod.GET)
@@ -147,7 +152,7 @@ public class AuthenticationRestController implements InitializingBean {
      */
     @RequestMapping(value = "/status/specialGroups", method = RequestMethod.GET)
     public EntityModel retrieveSpecialGroups(Pageable page, PagedResourcesAssembler assembler,
-                HttpServletRequest request, HttpServletResponse response)
+                                             HttpServletRequest request, HttpServletResponse response)
             throws SQLException {
         Context context = ContextUtil.obtainContext(request);
         Projection projection = utils.obtainProjection();
@@ -157,7 +162,7 @@ public class AuthenticationRestController implements InitializingBean {
         Page<GroupRest> groupPage = (Page<GroupRest>) utils.getPage(groupList, page);
         Link link = linkTo(
                 methodOn(AuthenticationRestController.class).retrieveSpecialGroups(page, assembler, request, response))
-                        .withSelfRel();
+                .withSelfRel();
 
         return EntityModel.of(new EmbeddedPage(link.getHref(),
                 groupPage.map(converter::toResource), null, "specialGroups"));
@@ -180,8 +185,13 @@ public class AuthenticationRestController implements InitializingBean {
 
         // Build our response. This will check if we have an EPerson.
         // If not, that means the authentication failed and we should return the error message
+
+        String ip = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        LoginDeviceAuditService.getInstance().logLoginAttempt(null, ip, userAgent, "FAILURE");
+
         return getLoginResponse(request,
-                                "Authentication failed. The credentials you provided are not valid.");
+                "Authentication failed. The credentials you provided are not valid.");
     }
 
     /**
@@ -220,7 +230,7 @@ public class AuthenticationRestController implements InitializingBean {
      * @return ResponseEntity
      */
     @RequestMapping(value = "/login", method = { RequestMethod.GET, RequestMethod.PUT, RequestMethod.PATCH,
-        RequestMethod.DELETE })
+            RequestMethod.DELETE })
     public ResponseEntity login() {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("Only POST is allowed for login requests.");
     }
@@ -232,17 +242,53 @@ public class AuthenticationRestController implements InitializingBean {
      * For logout we *require* POST requests. HEAD is also supported for endpoint visibility in HAL Browser, etc.
      * @return ResponseEntity (204 No Content)
      */
+
+
+
     @RequestMapping(value = "/logout", method = {RequestMethod.HEAD, RequestMethod.POST})
-    public ResponseEntity logout() {
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        Context context = ContextUtil.obtainContext(request);
+        userSessionAuditService.logLogout(context.getCurrentUser(), request);
         return ResponseEntity.noContent().build();
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    @RequestMapping(value = "/logout", method = {RequestMethod.HEAD, RequestMethod.POST})
+//    public ResponseEntity<Void> logout(HttpServletRequest request) {
+//        Context context = ContextUtil.obtainContext(request);
+//
+//        // Only pass user and request
+//        userSessionAuditService.logLogout(context.getCurrentUser(), request);
+//
+//        return ResponseEntity.noContent().build();
+//    }
+
 
     /**
      * Disables GET/PUT/PATCH on the /logout endpoint. You must use POST (see above method)
      * @return ResponseEntity
      */
     @RequestMapping(value = "/logout", method = { RequestMethod.GET, RequestMethod.PUT, RequestMethod.PATCH,
-        RequestMethod.DELETE })
+            RequestMethod.DELETE })
     public ResponseEntity logoutMethodNotAllowed() {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("Only POST is allowed for logout requests.");
     }
@@ -268,7 +314,7 @@ public class AuthenticationRestController implements InitializingBean {
             // Note that the actual HTTP status in this case is set by
             // org.dspace.app.rest.security.StatelessLoginFilter.unsuccessfulAuthentication()
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                 .body(failedMessage);
+                    .body(failedMessage);
         } else {
             //We have a user, so the login was successful.
             return ResponseEntity.ok().build();

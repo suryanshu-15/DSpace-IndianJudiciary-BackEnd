@@ -29,6 +29,7 @@ public class DSpaceAuthentication implements Authentication {
     private String password;
     private List<GrantedAuthority> authorities;
     private boolean authenticated;
+    private EPerson ePerson; // ✅ Add this
 
     /**
      * Create a DSpaceAuthentication instance for an already authenticated EPerson, including their GrantedAuthority
@@ -39,10 +40,16 @@ public class DSpaceAuthentication implements Authentication {
      * @param authorities EPerson's authorities
      */
     public DSpaceAuthentication(EPerson ePerson, List<GrantedAuthority> authorities) {
+        this.ePerson = ePerson; // <-- Add this
         this.previousLoginDate = ePerson.getPreviousActive();
         this.username = ePerson.getEmail();
         this.authorities = authorities;
         this.authenticated = true;
+    }
+
+
+    public EPerson getEPerson() {
+        return ePerson;
     }
 
     /**

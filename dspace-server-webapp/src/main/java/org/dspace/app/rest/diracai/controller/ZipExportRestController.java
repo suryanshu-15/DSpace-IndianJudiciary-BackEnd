@@ -1,7 +1,6 @@
 package org.dspace.app.rest.diracai.controller;
 
 import org.dspace.app.rest.diracai.service.ZipExportService;
-import org.dspace.app.rest.utils.ContextUtil;
 import org.dspace.content.Item;
 import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
@@ -30,7 +29,7 @@ public class ZipExportRestController {
     public ResponseEntity<String> generateZip(@PathVariable UUID itemUUID) {
         Context context = null;
         try {
-            context = ContextUtil.obtainCurrentRequestContext();
+            context = new Context();
             Item item = itemService.find(context, itemUUID);
             if (item == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Item not found");
