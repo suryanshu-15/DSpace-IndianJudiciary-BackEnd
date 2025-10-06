@@ -55,7 +55,7 @@ public class ZipExportService {
         String cino = getCinoFromMetadata(item,"dc","cino",null);
         String caseType = getCinoFromMetadata(item,"dc","casetype",null);
         String caseNumber = getCinoFromMetadata(item,"dc","case","number");
-        String petitionerName = getCinoFromMetadata(item,"dc","pname",null);
+        String petitionerName = getCinoFromMetadata(item,"dc","paname",null);
         String respondentName = getCinoFromMetadata(item,"dc","rname",null);
         String advocateName = getCinoFromMetadata(item,"dc","paname",null);
         String judgeName = getCinoFromMetadata(item,"dc","contributor","author");
@@ -65,17 +65,10 @@ public class ZipExportService {
         String scanDate = getCinoFromMetadata(item,"dc","date","scan");
         String verifiedBy = getCinoFromMetadata(item,"dc","verified-by",null);
         String dateVerification = getCinoFromMetadata(item,"dc","date","verification");
-        String batchNumber = getCinoFromMetadata(item,"dc","batch-number",null);
         String barcodeNumber = getCinoFromMetadata(item,"dc","barcode",null);
         String fileSize = getCinoFromMetadata(item,"dc","size",null);
         String characterCount = getCinoFromMetadata(item,"dc","char-count",null);
         String noOfPages = getCinoFromMetadata(item,"dc","pages",null);
-        String title = getCinoFromMetadata(item,"dc","title",null);
-        //String docType = getCinoFromMetadata(item,"dc","doc","type");
-        String docType = getDocumentType(item);
-
-        System.out.println("Document type: " + docType);
-
 
 
         if (cino == null) throw new Exception("CINO not found in metadata");
@@ -98,7 +91,7 @@ public class ZipExportService {
                 }
                 docList.add(Map.of(
                         "docName", bitstream.getName(),
-                        "docType",docType,
+                        "docType", "31",
                         "docDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
                 ));
             }
@@ -112,7 +105,7 @@ public class ZipExportService {
 
         // Step 4: Write <CINO>_Metadata.xml
         File xmlFile = new File(cinoDir, cino + "_Metadata.xml");
-        generateMetadataXml(item, cino ,caseType, caseNumber,petitionerName,respondentName,advocateName, judgeName ,disposalDate,district, caseYear,scanDate,verifiedBy,dateVerification,barcodeNumber,fileSize,characterCount,noOfPages,title,docType,xmlFile);
+        generateMetadataXml(item, cino ,caseType, caseNumber,petitionerName,respondentName,advocateName, judgeName ,disposalDate,district, caseYear,scanDate,verifiedBy,dateVerification,barcodeNumber,fileSize,characterCount,noOfPages,xmlFile);
 
 
         // Step 5: Create zip file
@@ -123,15 +116,10 @@ public class ZipExportService {
         }
 
         FileHashRecord fileHashRecord = new FileHashRecord();
-        fileHashRecord.setFileName(caseType+"_"+title+"_"+caseYear);
-        fileHashRecord.setBatchName(batchNumber);
-        fileHashRecord.setCaseType(caseType);
-        fileHashRecord.setCaseNo(caseNumber);
-        fileHashRecord.setStatus("Zip File Created");
+        fileHashRecord.setFileName(cino);
+        fileHashRecord.setZipStatus("Created Successfully");
         fileHashRecord.setCreatedAt(LocalDateTime.now());
-        fileHashRecord.setCinoNumber(cino);
         fileHashRecord.setFileCount(docList.size());
-        fileHashRecord.setCreatedBy(context.getCurrentUser().getName());
         fileHashRecordRepository.save(fileHashRecord);
         return zipFile;
     }
@@ -140,14 +128,6 @@ public class ZipExportService {
     private String getCinoFromMetadata(Item item,String schema, String element , String qualifier) {
         List<MetadataValue> values = itemService.getMetadata(item, schema, element, qualifier, Item.ANY);
         return values.isEmpty() ? null : values.get(0).getValue();
-    }
-
-    private String getDocumentType(Item item) {
-        List<MetadataValue> docTypeList = itemService.getMetadata(item, "dc", "type", "document", Item.ANY);
-        if (docTypeList != null && !docTypeList.isEmpty()) {
-            return docTypeList.get(0).getValue();
-        }
-        return "Unknown Document Type"; // fallback if missing
     }
 
     private void generateMetadataXml(
@@ -169,48 +149,18 @@ public class ZipExportService {
             String fileSize,
             String characterCount,
             String noOfPages,
-            String title,
-            String docType,
             File xmlOutputFile
     )
 
     {
         ECourtCaseType eCourtCaseType = new ECourtCaseType();
 
-        System.out.println(
-                "cino=" + cino +
-                        ", caseType=" + caseType +
-                        ", caseNumber=" + caseNumber +
-                        ", petitionerName=" + petitionerName +
-                        ", respondentName=" + respondentName +
-                        ", advocateName=" + advocateName +
-                        ", judgeName=" + judgeName +
-                        ", disposalDate=" + disposalDate +
-                        ", district=" + district +
-                        ", caseYear=" + caseYear +
-                        ", scanDate=" + scanDate +
-                        ", verifiedBy=" + verifiedBy +
-                        ", dateVerification=" + dateVerification +
-                        ", barcodeNumber=" + barcodeNumber +
-                        ", fileSize=" + fileSize +
-                        ", characterCount=" + characterCount +
-                        ", noOfPages=" + noOfPages +
-                        ", title=" + title
-//                        ", docType=" + docType
-        );
-
         CaseTypeInformation caseTypeInformation = new CaseTypeInformation();
         caseTypeInformation.setCaseCNRNumber(cino);
         caseTypeInformation.setCaseNature(caseType);
-        caseTypeInformation.setCaseNumber(title);
+        caseTypeInformation.setCaseNumber(caseNumber);
         caseTypeInformation.setCaseTypeName(caseType);
         caseTypeInformation.setNameOfDistrict(district);
-        caseTypeInformation.setRegistrationYear(caseYear);
-        caseTypeInformation.setRegistrationDate(caseYear+"-01-01 00:00:00");
-        caseTypeInformation.setRegistrationNumber(title);
-
-
-        eCourtCaseType.setCase(caseTypeInformation);
 
         LitigantTypeInformation litigant = new LitigantTypeInformation();
         PetitionerTypeInformation petitioner = new PetitionerTypeInformation();
@@ -242,10 +192,6 @@ public class ZipExportService {
         masterFileType.setFileSize(fileSize);
         digitizationTypeInformation.setMasterFile(masterFileType);
         digitizationTypeInformation.setVerifiedBy(verifiedBy);
-//        digitizationTypeInformation.setDocumentType(docType);
-        digitizationTypeInformation.setDocumentType(docType); // <-- set document type
-
-
         eCourtCaseType.setDigitization(digitizationTypeInformation);
 
 
@@ -256,6 +202,7 @@ public class ZipExportService {
         advocate.setAdvocateName(advocateName);
         caseTypeInformation.getAdvocate().add(advocate);
 
+        eCourtCaseType.setCase(caseTypeInformation);
 
         JTDRMetadataSchema.createXML(eCourtCaseType, xmlOutputFile.getAbsolutePath());
     }

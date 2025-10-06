@@ -108,6 +108,8 @@ package org.dspace.app.rest.diracai.service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.dspace.app.rest.diracai.util.PdfEncryptUtil;
 import org.dspace.app.rest.diracai.util.PdfMetadataUtil;
+
+import org.dspace.app.rest.diracai.util.PdfWatermarkUtil;
 import org.dspace.app.rest.utils.ContextUtil;
 import org.dspace.content.Bitstream;
 import org.dspace.content.Bundle;
@@ -133,7 +135,7 @@ public class TranscriptionService {
 
     private static final Logger log = Logger.getLogger(TranscriptionService.class.getName());
 
-    private static final String WATERMARKED_PDF_STORAGE_DIR = "/home/dspace/dspace/July_7th/water_mark/pdfs/";
+    private static final String WATERMARKED_PDF_STORAGE_DIR = "/home/diracai/dspace_watermarked_pdfs/";
 
     @Autowired
     private BitstreamService bitstreamService;
@@ -146,6 +148,9 @@ public class TranscriptionService {
 
     @Autowired
     private ContextService contextService;
+
+    @Autowired
+    private PdfWatermarkUtil pdfWatermarkUtil;
 
     public String transcribeAndSaveToMetadata(UUID itemUuid, HttpServletRequest request) throws Exception {
         Context context = ContextUtil.obtainContext(request);
@@ -189,13 +194,12 @@ public class TranscriptionService {
                     }
                     log.fine("Created temporary input file: " + inputFile.getAbsolutePath());
 
-                    tempWatermarkedPdf = PdfWatermarkUtil.addImageWatermark(inputFile);
-                    log.fine("Created temporary watermarked PDF: " + tempWatermarkedPdf.getAbsolutePath());
+//                    tempWatermarkedPdf = pdfWatermarkUtil.addImageWatermark(inputFile);
 
 
                     String uniqueFileName = UUID.randomUUID().toString() + "_" + fileName;
                     storedWatermarkedPdf = new File(WATERMARKED_PDF_STORAGE_DIR, uniqueFileName);
-                    Files.copy(tempWatermarkedPdf.toPath(), storedWatermarkedPdf.toPath(), StandardCopyOption.REPLACE_EXISTING);
+//                    Files.copy(tempWatermarkedPdf.toPath(), storedWatermarkedPdf.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     log.info("Stored watermarked PDF: " + storedWatermarkedPdf.getAbsolutePath());
                     String title = itemService.getMetadataFirstValue(item, "dc", "title", null, Item.ANY);
                     String author = itemService.getMetadataFirstValue(item, "dc", "contributor", "author", Item.ANY);

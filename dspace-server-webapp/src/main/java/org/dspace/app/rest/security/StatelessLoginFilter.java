@@ -13,8 +13,15 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.dspace.app.rest.diracai.service.LoginDeviceAuditService;
+import org.dspace.app.rest.diracai.service.UserSessionAuditService;
+import org.dspace.core.Context;
+import org.dspace.services.RequestService;
+import org.dspace.xoai.services.api.context.ContextService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -41,6 +48,9 @@ public class StatelessLoginFilter extends AbstractAuthenticationProcessingFilter
     public void afterPropertiesSet() {
     }
 
+
+
+
     /**
      * Initialize a StatelessLoginFilter for the given URL and HTTP method. This login filter will ONLY attempt
      * authentication for requests that match this URL and method. The URL & method are defined in the configuration
@@ -57,6 +67,42 @@ public class StatelessLoginFilter extends AbstractAuthenticationProcessingFilter
         super(new AntPathRequestMatcher(url, httpMethod));
         this.authenticationManager = authenticationManager;
         this.restAuthenticationService = restAuthenticationService;
+    }
+
+    /**
+     * If the above attemptAuthentication() call was successful (no authentication error was thrown),
+     * then this method will take the returned {@link DSpaceAuthentication} class (which includes all
+     * the data from the authenticated user) and add the authentication data to the response.
+     * <P>
+     * For DSpace, this is calling our {@link org.dspace.app.rest.security.jwt.JWTTokenRestAuthenticationServiceImpl}
+     * in order to create a JWT based on the authentication data & send that JWT back in the response.
+     *
+     * @param req current request
+     * @param res response
+     * @param chain FilterChain
+     * @param auth Authentication object containing info about user who had a successful authentication
+     * @throws IOException
+     * @throws ServletException
+     * @see org.dspace.app.rest.security.jwt.JWTTokenRestAuthenticationServiceImpl
+     */
+    @Override
+    protected void successfulAuthentication(HttpServletRequest req,
+                                            HttpServletResponse res,
+                                            FilterChain chain,
+                                            Authentication auth) throws IOException, ServletException {
+
+        DSpaceAuthentication dSpaceAuthentication = (DSpaceAuthentication) auth;
+        log.debug("Authentication successful for EPerson {}", dSpaceAuthentication::getName);
+        restAuthenticationService.addAuthenticationDataForUser(req, res, dSpaceAuthentication, false);
+        System.out.println("------------------------------------ xldknaslkdnjasj------------------------------");
+
+        if (dSpaceAuthentication.getEPerson() != null) {
+            UserSessionAuditService.getInstance().log("LOGIN", dSpaceAuthentication.getEPerson(), req);
+            String ip = req.getRemoteAddr();
+            String userAgent = req.getHeader("User-Agent");
+            LoginDeviceAuditService.getInstance().logLoginAttempt(dSpaceAuthentication.getEPerson(), ip, userAgent, "SUCCESS");
+        }
+
     }
 
     /**
@@ -86,33 +132,6 @@ public class StatelessLoginFilter extends AbstractAuthenticationProcessingFilter
     }
 
     /**
-     * If the above attemptAuthentication() call was successful (no authentication error was thrown),
-     * then this method will take the returned {@link DSpaceAuthentication} class (which includes all
-     * the data from the authenticated user) and add the authentication data to the response.
-     * <P>
-     * For DSpace, this is calling our {@link org.dspace.app.rest.security.jwt.JWTTokenRestAuthenticationServiceImpl}
-     * in order to create a JWT based on the authentication data & send that JWT back in the response.
-     *
-     * @param req current request
-     * @param res response
-     * @param chain FilterChain
-     * @param auth Authentication object containing info about user who had a successful authentication
-     * @throws IOException
-     * @throws ServletException
-     * @see org.dspace.app.rest.security.jwt.JWTTokenRestAuthenticationServiceImpl
-     */
-    @Override
-    protected void successfulAuthentication(HttpServletRequest req,
-                                            HttpServletResponse res,
-                                            FilterChain chain,
-                                            Authentication auth) throws IOException, ServletException {
-
-        DSpaceAuthentication dSpaceAuthentication = (DSpaceAuthentication) auth;
-        log.debug("Authentication successful for EPerson {}", dSpaceAuthentication::getName);
-        restAuthenticationService.addAuthenticationDataForUser(req, res, dSpaceAuthentication, false);
-    }
-
-    /**
      * If the above attemptAuthentication() call was unsuccessful, then ensure that the response is a 401 Unauthorized
      * AND it includes a WWW-Authentication header. We use this header in DSpace to return all the enabled
      * authentication options available to the UI (along with the path to the login URL for each option)
@@ -124,15 +143,21 @@ public class StatelessLoginFilter extends AbstractAuthenticationProcessingFilter
      */
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request,
-                                              HttpServletResponse response, AuthenticationException failed)
-            throws IOException, ServletException {
+                                              HttpServletResponse response,
+                                              AuthenticationException failed) throws IOException, ServletException {
 
+        String ip = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+
+        LoginDeviceAuditService.getInstance().logLoginAttempt(null, ip, userAgent, "FAILURE");
+        log.info("we are inside unsuccessfull--------------------------------------------------");
+        System.out.println("we are inside unsuccessfull--------------------------------------------------");
         String authenticateHeaderValue = restAuthenticationService.getWwwAuthenticateHeaderValue(request, response);
 
         response.setHeader("WWW-Authenticate", authenticateHeaderValue);
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication failed!");
-        log.error("Authentication failed (status:{})",
-                  HttpServletResponse.SC_UNAUTHORIZED, failed);
+        log.error("Authentication failed (status:{})", HttpServletResponse.SC_UNAUTHORIZED, failed);
+
     }
 
 }
