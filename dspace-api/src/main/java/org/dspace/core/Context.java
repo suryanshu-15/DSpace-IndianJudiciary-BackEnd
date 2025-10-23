@@ -142,6 +142,7 @@ public class Context implements AutoCloseable {
     protected Context(EventService eventService, DBConnection dbConnection) {
         this.eventService = eventService;
         this.dbConnection = dbConnection;
+        System.out.println("from line 145: "+dbConnection);
         init();
     }
 
@@ -173,12 +174,15 @@ public class Context implements AutoCloseable {
 
         if (eventService == null) {
             eventService = EventServiceFactory.getInstance().getEventService();
+            System.out.println("eventservice: "+ eventService);
         }
         if (dbConnection == null) {
             // Obtain a non-auto-committing connection
             dbConnection = new DSpace().getServiceManager()
                                        .getServiceByName(null, DBConnection.class);
+                                    //    System.out.println(dbConnection);
             if (dbConnection == null) {
+                System.out.println("no connection found");
                 log.fatal("Cannot obtain the bean which provides a database connection. " +
                               "Check previous entries in the dspace.log to find why the db failed to initialize.");
             }
@@ -232,6 +236,7 @@ public class Context implements AutoCloseable {
      * @return the database connection
      */
     DBConnection getDBConnection() {
+        System.out.println("Connected: ");
         return dbConnection;
     }
 
